@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "k8s-ticon.fullname" . }}
+  labels:
+    {{- include "k8s-ticon.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "k8s-ticon.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "k8s-ticon.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: TCP
+            {{- end }}
+          volumeMounts:
+            - name: data-volume
+              mountPath: /cproject/data
+            - name: log-volume
+              mountPath: /cproject/log
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: {{ include "k8s-ticon.fullname" . }}-data
+        - name: log-volume
+          persistentVolumeClaim:
+            claimName: {{ include "k8s-ticon.fullname" . }}-log
+
